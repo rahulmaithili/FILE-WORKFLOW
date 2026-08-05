@@ -169,7 +169,7 @@ if (isset($_SESSION['user_id'])) {
         <div class="dropdown">
           <div class="user-profile-badge dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
             <?php if (!empty($currentUser['profile_photo']) && $currentUser['profile_photo'] !== 'default-avatar.png' && file_exists(PROFILE_UPLOAD_DIR . $currentUser['profile_photo'])): ?>
-              <img src="<?= APP_URL ?>/uploads/profiles/<?= htmlspecialchars($currentUser['profile_photo']) ?>" class="rounded-circle border border-primary" style="width: 40px; height: 40px; object-fit: cover;">
+              <img src="<?= APP_URL ?>/serve.php?file=profiles/<?= htmlspecialchars($currentUser['profile_photo']) ?>" class="rounded-circle border border-primary" style="width: 40px; height: 40px; object-fit: cover;">
             <?php else: ?>
               <div class="avatar-circle">
                 <?= strtoupper(substr($currentUser['name'] ?? 'U', 0, 1)) ?>

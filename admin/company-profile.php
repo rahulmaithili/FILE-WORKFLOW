@@ -13,6 +13,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $companyEmail = sanitize($_POST['company_email'] ?? '');
     $companyMobile = sanitize($_POST['company_mobile'] ?? '');
     $companyAddress = sanitize($_POST['company_address'] ?? '');
+    $customUploadPath = sanitize($_POST['custom_upload_path'] ?? '');
 
     // Handle logo upload
     $logoFileName = $company['company_logo'] ?? 'default-logo.png';
@@ -42,7 +43,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Update Company settings in DB
     $stmtUpdate = $db->prepare("
         UPDATE company_settings 
-        SET company_name = :name, company_email = :email, company_mobile = :mobile, company_address = :address, company_logo = :logo 
+        SET company_name = :name, company_email = :email, company_mobile = :mobile, company_address = :address, company_logo = :logo, custom_upload_path = :custom_upload_path
         WHERE id = :id
     ");
     $stmtUpdate->execute([
@@ -51,6 +52,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'mobile' => $companyMobile,
         'address' => $companyAddress,
         'logo' => $logoFileName,
+        'custom_upload_path' => $customUploadPath,
         'id' => $company['id']
     ]);
 
@@ -72,7 +74,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         <div class="p-2 border rounded bg-light">
           <?php if (!empty($company['company_logo']) && $company['company_logo'] !== 'default-logo.png' && file_exists(UPLOAD_DIR . $company['company_logo'])): ?>
-            <img src="<?= APP_URL ?>/uploads/<?= htmlspecialchars($company['company_logo']) ?>" class="img-fluid" style="max-height: 50px; object-fit: contain;">
+            <img src="<?= APP_URL ?>/serve.php?file=<?= htmlspecialchars($company['company_logo']) ?>" class="img-fluid" style="max-height: 50px; object-fit: contain;">
           <?php else: ?>
             <span class="fw-bold text-primary"><i class="fas fa-folder-tree me-1"></i> <?= htmlspecialchars($company['company_name'] ?? 'File CRM') ?></span>
           <?php endif; ?>
@@ -101,7 +103,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           </div>
           <div class="col-12">
             <label class="form-label fw-bold">Company Address</label>
-            <textarea name="company_address" class="form-control" rows="3"><?= htmlspecialchars($company['company_address'] ?? '') ?></textarea>
+            <textarea name="company_address" class="form-control" rows="2"><?= htmlspecialchars($company['company_address'] ?? '') ?></textarea>
+          </div>
+          <div class="col-12">
+            <label class="form-label fw-bold">Uploads Directory Path (Custom)</label>
+            <input type="text" name="custom_upload_path" class="form-control" value="<?= htmlspecialchars($company['custom_upload_path'] ?? '') ?>" placeholder="e.g. D:/CRM_Uploads (Leave blank for default project uploads/ folder)">
+            <small class="text-muted"><i class="fas fa-info-circle me-1"></i> If a custom path is specified, all uploaded case documents, user profile photos, and company logos will be saved to that directory.</small>
           </div>
         </div>
 

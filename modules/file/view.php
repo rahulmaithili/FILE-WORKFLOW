@@ -207,7 +207,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_comment'])) {
                   <i class="fas fa-file-alt"></i>
                 </div>
                 <div>
-                  <a href="javascript:void(0)" onclick="previewDocument('<?= APP_URL ?>/<?= htmlspecialchars($doc['file_path']) ?>', '<?= htmlspecialchars($doc['document_name']) ?>')" class="fw-bold text-dark text-decoration-none small">
+                  <a href="javascript:void(0)" onclick="previewDocument('<?= APP_URL ?>/serve.php?file=<?= htmlspecialchars($doc['file_path']) ?>', '<?= htmlspecialchars($doc['document_name']) ?>')" class="fw-bold text-dark text-decoration-none small">
                     <?= htmlspecialchars($doc['document_name']) ?>
                   </a>
                   <small class="text-muted d-block" style="font-size: 0.75rem;">
@@ -215,7 +215,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_comment'])) {
                   </small>
                 </div>
               </div>
-              <button type="button" onclick="previewDocument('<?= APP_URL ?>/<?= htmlspecialchars($doc['file_path']) ?>', '<?= htmlspecialchars($doc['document_name']) ?>')" class="btn btn-sm btn-light border text-primary" title="Preview & Print File">
+              <button type="button" onclick="previewDocument('<?= APP_URL ?>/serve.php?file=<?= htmlspecialchars($doc['file_path']) ?>', '<?= htmlspecialchars($doc['document_name']) ?>')" class="btn btn-sm btn-light border text-primary" title="Preview & Print File">
                 <i class="fas fa-eye me-1"></i> View
               </button>
             </div>

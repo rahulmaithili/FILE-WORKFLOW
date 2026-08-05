@@ -14,7 +14,7 @@ $companyInfo = $db->query("SELECT * FROM company_settings LIMIT 1")->fetch() ?: 
 <aside class="app-sidebar">
   <div class="sidebar-header">
     <?php if (!empty($companyInfo['company_logo']) && $companyInfo['company_logo'] !== 'default-logo.png' && file_exists(UPLOAD_DIR . $companyInfo['company_logo'])): ?>
-      <img src="<?= APP_URL ?>/uploads/<?= htmlspecialchars($companyInfo['company_logo']) ?>" class="img-fluid rounded border-0" style="max-height: 40px; max-width: 45px; object-fit: contain;">
+      <img src="<?= APP_URL ?>/serve.php?file=<?= htmlspecialchars($companyInfo['company_logo']) ?>" class="img-fluid rounded border-0" style="max-height: 40px; max-width: 45px; object-fit: contain;">
     <?php else: ?>
       <div class="brand-icon">
         <i class="fas fa-folder-tree text-white"></i>

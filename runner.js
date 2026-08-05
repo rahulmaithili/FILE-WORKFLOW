@@ -18,6 +18,7 @@ const possiblePhpPaths = [
     'php',
     'C:\\php\\php.exe',
     'C:\\xampp\\php\\php.exe',
+    'C:\\xamppp\\php\\php.exe',
     'C:\\wamp64\\bin\\php\\php.exe',
     'C:\\laragon\\bin\\php\\php.exe'
 ];
@@ -39,10 +40,11 @@ for (const p of possiblePhpPaths) {
 
 if (phpCmd) {
     console.log(`✅ PHP Binary Found: ${phpCmd}`);
-    console.log(`📡 Starting Local PHP Server on http://localhost:${PORT} ...\n`);
+    console.log(`📡 Starting Local PHP Server on http://localhost:${PORT} (binding to all network interfaces)...`);
+    console.log(`💻 To access from other PCs on the same network, use: http://<YOUR_HOST_PC_IP>:${PORT}\n`);
 
-    const server = spawn(phpCmd, ['-S', `localhost:${PORT}`], {
-        cwd: __DIR__ || process.cwd(),
+    const server = spawn(phpCmd, ['-S', `0.0.0.0:${PORT}`], {
+        cwd: __dirname || process.cwd(),
         stdio: 'inherit'
     });
 

@@ -77,7 +77,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <div class="card border-0 shadow-sm p-4 text-center" style="border-radius: var(--radius-lg);">
       <div class="position-relative d-inline-block mx-auto mb-3">
         <?php if (!empty($userData['profile_photo']) && $userData['profile_photo'] !== 'default-avatar.png' && file_exists(PROFILE_UPLOAD_DIR . $userData['profile_photo'])): ?>
-          <img src="<?= APP_URL ?>/uploads/profiles/<?= htmlspecialchars($userData['profile_photo']) ?>" class="rounded-circle border border-primary p-1 shadow-sm" style="width: 130px; height: 130px; object-fit: cover;">
+          <img src="<?= APP_URL ?>/serve.php?file=profiles/<?= htmlspecialchars($userData['profile_photo']) ?>" class="rounded-circle border border-primary p-1 shadow-sm" style="width: 130px; height: 130px; object-fit: cover;">
         <?php else: ?>
           <div class="rounded-circle bg-primary-soft text-primary d-flex align-items-center justify-content-center border border-primary p-1 mx-auto shadow-sm" style="width: 130px; height: 130px; font-size: 3.5rem; font-weight: 700;">
             <?= strtoupper(substr($userData['name'], 0, 1)) ?>

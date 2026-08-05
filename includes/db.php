@@ -11,8 +11,21 @@ class Database {
     public static function getConnection(): PDO {
         if (self::$instance === null) {
             self::$instance = self::connect();
+            self::checkMigrations(self::$instance);
         }
         return self::$instance;
+    }
+
+    private static function checkMigrations(PDO $db): void {
+        try {
+            $db->query("SELECT custom_upload_path FROM company_settings LIMIT 1");
+        } catch (Exception $e) {
+            try {
+                $db->exec("ALTER TABLE company_settings ADD COLUMN custom_upload_path TEXT NULL;");
+            } catch (Exception $ex) {
+                // Ignore if it fails
+            }
+        }
     }
 
     private static function connect(): PDO {
