@@ -26,6 +26,37 @@ class Database {
                 // Ignore if it fails
             }
         }
+
+        try {
+            $db->query("SELECT 1 FROM system_features LIMIT 1");
+        } catch (Exception $e) {
+            try {
+                $driver = $db->getAttribute(PDO::ATTR_DRIVER_NAME);
+                if ($driver === 'sqlite') {
+                    $db->exec("
+                        CREATE TABLE IF NOT EXISTS system_features (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            feature_key TEXT NOT NULL UNIQUE,
+                            feature_name TEXT NOT NULL,
+                            description TEXT,
+                            status TEXT DEFAULT 'enabled'
+                        );
+                    ");
+                } else {
+                    $db->exec("
+                        CREATE TABLE IF NOT EXISTS system_features (
+                            id INT PRIMARY KEY AUTO_INCREMENT,
+                            feature_key VARCHAR(50) NOT NULL UNIQUE,
+                            feature_name VARCHAR(100) NOT NULL,
+                            description TEXT,
+                            status VARCHAR(20) DEFAULT 'enabled'
+                        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+                    ");
+                }
+            } catch (Exception $ex) {
+                // Ignore if it fails
+            }
+        }
     }
 
     private static function connect(): PDO {
