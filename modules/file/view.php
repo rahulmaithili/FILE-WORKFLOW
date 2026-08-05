@@ -57,6 +57,28 @@ $stmtDocs = $db->prepare("
 $stmtDocs->execute(['fid' => $fileId]);
 $documents = $stmtDocs->fetchAll();
 
+// Fetch required document types for this case's work type
+$stmtReqDocs = $db->prepare("
+    SELECT dt.* 
+    FROM document_types dt
+    JOIN work_type_required_docs wtrd ON dt.id = wtrd.document_type_id
+    WHERE wtrd.work_type_id = :wt_id
+    ORDER BY dt.name ASC
+");
+$stmtReqDocs->execute(['wt_id' => $file['work_type_id']]);
+$requiredDocTypes = $stmtReqDocs->fetchAll();
+
+// Map uploaded documents by their document_type_id for easy checklist lookup
+$uploadedChecklist = [];
+$additionalDocs = [];
+foreach ($documents as $doc) {
+    if (!empty($doc['document_type_id'])) {
+        $uploadedChecklist[intval($doc['document_type_id'])] = $doc;
+    } else {
+        $additionalDocs[] = $doc;
+    }
+}
+
 // Fetch timeline history
 $stmtHistory = $db->prepare("
     SELECT h.*, u_from.name as from_name, u_to.name as to_name, ws.stage_name 
@@ -187,20 +209,76 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_comment'])) {
       </div>
     </div>
 
-    <!-- Attached Documents Section -->
+    <!-- Required Documents Checklist Section -->
+    <div class="card border-0 shadow-sm p-4 mb-4" style="border-radius: var(--radius-lg);">
+      <div class="border-bottom pb-2 mb-3">
+        <h5 class="fw-bold mb-0 text-dark"><i class="fas fa-tasks text-primary me-2"></i> Required Documents Checklist</h5>
+        <small class="text-muted">Documents required specifically for the "<?= htmlspecialchars($file['work_type_name']) ?>" pipeline</small>
+      </div>
+
+      <?php if (empty($requiredDocTypes)): ?>
+        <p class="text-muted small my-2"><i class="fas fa-check-circle text-success me-1"></i> No required documents defined for this pipeline.</p>
+      <?php else: ?>
+        <div class="list-group list-group-flush">
+          <?php foreach ($requiredDocTypes as $docType): 
+            $isUploaded = isset($uploadedChecklist[$docType['id']]);
+            $doc = $isUploaded ? $uploadedChecklist[$docType['id']] : null;
+          ?>
+            <div class="list-group-item d-flex flex-column flex-md-row justify-content-between align-items-md-center px-0 py-3">
+              <div class="d-flex align-items-center gap-3">
+                <div class="avatar-circle <?= $isUploaded ? 'bg-success-soft text-success' : 'bg-danger-soft text-danger' ?>" style="width: 36px; height: 36px; border: none;">
+                  <i class="fas <?= $isUploaded ? 'fa-check' : 'fa-times' ?>"></i>
+                </div>
+                <div>
+                  <div class="d-flex align-items-center gap-2">
+                    <strong class="text-dark small"><?= htmlspecialchars($docType['name']) ?></strong>
+                    <?php if ($docType['is_mandatory'] == 1): ?>
+                      <span class="text-danger small font-monospace" style="font-size: 0.72rem;">*Required</span>
+                    <?php endif; ?>
+                  </div>
+                  <?php if ($isUploaded): ?>
+                    <small class="text-muted d-block" style="font-size: 0.75rem;">
+                      Uploaded by <?= htmlspecialchars($doc['uploader_name'] ?? 'System') ?> &bull; <?= timeAgo($doc['uploaded_at']) ?>
+                    </small>
+                  <?php else: ?>
+                    <small class="text-danger-soft text-danger d-block" style="font-size: 0.75rem;">
+                      <i class="fas fa-exclamation-triangle me-1"></i> Missing Document
+                    </small>
+                  <?php endif; ?>
+                </div>
+              </div>
+
+              <div class="d-flex align-items-center gap-2 mt-2 mt-md-0">
+                <?php if ($isUploaded): ?>
+                  <button type="button" onclick="previewDocument('<?= APP_URL ?>/serve.php?file=<?= htmlspecialchars($doc['file_path']) ?>', '<?= htmlspecialchars($doc['document_name']) ?>')" class="btn btn-sm btn-light border text-primary" title="Preview File">
+                    <i class="fas fa-eye me-1"></i> View
+                  </button>
+                <?php else: ?>
+                  <a href="<?= APP_URL ?>/modules/file/document-upload.php?file_id=<?= $file['id'] ?>&document_type_id=<?= $docType['id'] ?>" class="btn btn-sm btn-outline-danger fw-bold">
+                    <i class="fas fa-camera-retro me-1"></i> Scan / Upload
+                  </a>
+                <?php endif; ?>
+              </div>
+            </div>
+          <?php endforeach; ?>
+        </div>
+      <?php endif; ?>
+    </div>
+
+    <!-- Additional / Other Documents Section -->
     <div class="card border-0 shadow-sm p-4" style="border-radius: var(--radius-lg);">
       <div class="d-flex justify-content-between align-items-center mb-3 border-bottom pb-2">
-        <h5 class="fw-bold mb-0"><i class="fas fa-folder-open text-warning me-2"></i> Attached Documents (<?= count($documents) ?>)</h5>
+        <h5 class="fw-bold mb-0 text-dark"><i class="fas fa-folder-open text-warning me-2"></i> Additional Uploads (<?= count($additionalDocs) ?>)</h5>
         <a href="<?= APP_URL ?>/modules/file/document-upload.php?file_id=<?= $file['id'] ?>" class="btn btn-sm btn-outline-primary">
-          <i class="fas fa-camera me-1"></i> Upload / Scan Doc
+          <i class="fas fa-plus me-1"></i> Attach Other Document
         </a>
       </div>
 
-      <?php if (empty($documents)): ?>
-        <p class="text-muted small my-3">No documents attached to this case file yet.</p>
+      <?php if (empty($additionalDocs)): ?>
+        <p class="text-muted small my-3">No additional documents attached to this case file.</p>
       <?php else: ?>
         <div class="list-group list-group-flush">
-          <?php foreach ($documents as $doc): ?>
+          <?php foreach ($additionalDocs as $doc): ?>
             <div class="list-group-item d-flex justify-content-between align-items-center px-0 py-2.5">
               <div class="d-flex align-items-center gap-3">
                 <div class="avatar-circle bg-light text-primary" style="width: 36px; height: 36px; border: none;">
@@ -215,7 +293,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_comment'])) {
                   </small>
                 </div>
               </div>
-              <button type="button" onclick="previewDocument('<?= APP_URL ?>/serve.php?file=<?= htmlspecialchars($doc['file_path']) ?>', '<?= htmlspecialchars($doc['document_name']) ?>')" class="btn btn-sm btn-light border text-primary" title="Preview & Print File">
+              <button type="button" onclick="previewDocument('<?= APP_URL ?>/serve.php?file=<?= htmlspecialchars($doc['file_path']) ?>', '<?= htmlspecialchars($doc['document_name']) ?>')" class="btn btn-sm btn-light border text-primary" title="Preview File">
                 <i class="fas fa-eye me-1"></i> View
               </button>
             </div>

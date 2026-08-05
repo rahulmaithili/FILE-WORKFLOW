@@ -57,6 +57,74 @@ class Database {
                 // Ignore if it fails
             }
         }
+
+        // 3. Migrate document categories schema
+        try {
+            $db->query("SELECT 1 FROM document_types LIMIT 1");
+        } catch (Exception $e) {
+            try {
+                $driver = $db->getAttribute(PDO::ATTR_DRIVER_NAME);
+                if ($driver === 'sqlite') {
+                    $db->exec("
+                        CREATE TABLE IF NOT EXISTS document_types (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            name TEXT NOT NULL UNIQUE,
+                            description TEXT,
+                            is_mandatory INTEGER DEFAULT 1
+                        );
+                        CREATE TABLE IF NOT EXISTS work_type_required_docs (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            work_type_id INTEGER NOT NULL,
+                            document_type_id INTEGER NOT NULL,
+                            FOREIGN KEY (work_type_id) REFERENCES work_types(id) ON DELETE CASCADE,
+                            FOREIGN KEY (document_type_id) REFERENCES document_types(id) ON DELETE CASCADE
+                        );
+                    ");
+                } else {
+                    $db->exec("
+                        CREATE TABLE IF NOT EXISTS document_types (
+                            id INT PRIMARY KEY AUTO_INCREMENT,
+                            name VARCHAR(100) NOT NULL UNIQUE,
+                            description TEXT,
+                            is_mandatory TINYINT DEFAULT 1
+                        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+                        CREATE TABLE IF NOT EXISTS work_type_required_docs (
+                            id INT PRIMARY KEY AUTO_INCREMENT,
+                            work_type_id INT NOT NULL,
+                            document_type_id INT NOT NULL,
+                            FOREIGN KEY (work_type_id) REFERENCES work_types(id) ON DELETE CASCADE,
+                            FOREIGN KEY (document_type_id) REFERENCES document_types(id) ON DELETE CASCADE
+                        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+                    ");
+                }
+
+                // Seed default document categories
+                $defaultDocs = [
+                    ['Aadhaar Card', 'Identity & Address Proof', 1],
+                    ['Electricity Bill', 'Utility / Address verification', 1],
+                    ['Customer Photo', 'Passport size color photograph', 1],
+                    ['NOC Letter', 'No Objection Certificate from owner', 0],
+                    ['Rent Agreement', 'Registered Rent Agreement copy', 0]
+                ];
+                $stmtInsertDoc = $db->prepare("INSERT INTO document_types (name, description, is_mandatory) VALUES (?, ?, ?)");
+                foreach ($defaultDocs as $d) {
+                    $stmtInsertDoc->execute($d);
+                }
+            } catch (Exception $ex) {
+                // Ignore if it fails
+            }
+        }
+
+        // 4. Ensure document_type_id exists in file_documents table
+        try {
+            $db->query("SELECT document_type_id FROM file_documents LIMIT 1");
+        } catch (Exception $e) {
+            try {
+                $db->exec("ALTER TABLE file_documents ADD COLUMN document_type_id INT NULL;");
+            } catch (Exception $ex) {
+                // Ignore if it fails
+            }
+        }
     }
 
     private static function connect(): PDO {

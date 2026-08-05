@@ -87,6 +87,10 @@ $companyInfo = $db->query("SELECT * FROM company_settings LIMIT 1")->fetch() ?: 
         <i class="fas fa-building sidebar-icon-yellow"></i> <span>Company Settings</span>
       </a>
 
+      <a href="<?= APP_URL ?>/admin/document-types.php" title="Document Categories" class="nav-item-custom <?= $currentPage === 'document-types.php' ? 'active' : '' ?>">
+        <i class="fas fa-tags sidebar-icon-purple" style="color: #a855f7;"></i> <span>Document Categories</span>
+      </a>
+
       <a href="<?= APP_URL ?>/admin/features.php" title="System Features" class="nav-item-custom <?= $currentPage === 'features.php' ? 'active' : '' ?>">
         <i class="fas fa-toggle-on sidebar-icon-cyan"></i> <span>System Addons</span>
       </a>

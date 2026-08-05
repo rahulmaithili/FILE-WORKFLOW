@@ -31,6 +31,25 @@ if ($selectedWorkTypeId > 0) {
     $stages = $stmt->fetchAll();
 }
 
+// Handle updating required documents for work type
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_required_docs'])) {
+    // Delete existing mappings
+    $stmtDelete = $db->prepare("DELETE FROM work_type_required_docs WHERE work_type_id = :wt");
+    $stmtDelete->execute(['wt' => $selectedWorkTypeId]);
+
+    // Insert new mappings
+    $docIds = $_POST['required_doc_ids'] ?? [];
+    if (!empty($docIds)) {
+        $stmtInsert = $db->prepare("INSERT INTO work_type_required_docs (work_type_id, document_type_id) VALUES (:wt, :doc)");
+        foreach ($docIds as $docId) {
+            $stmtInsert->execute(['wt' => $selectedWorkTypeId, 'doc' => intval($docId)]);
+        }
+    }
+    setFlashMessage('success', 'Required documents updated successfully.');
+    header("Location: workflow-builder.php?work_type_id=" . $selectedWorkTypeId);
+    exit;
+}
+
 $roles = $db->query("SELECT * FROM roles ORDER BY id ASC")->fetchAll();
 ?>
 
@@ -133,7 +152,48 @@ $roles = $db->query("SELECT * FROM roles ORDER BY id ASC")->fetchAll();
         </div>
         <div class="mb-3">
           <label class="form-label text-muted small fw-bold">Description</label>
-          <p class="text-dark small"><?= htmlspecialchars($activeWorkType['description'] ?: 'No description provided.') ?></p>
+          <p class="text-dark small mb-0"><?= htmlspecialchars($activeWorkType['description'] ?: 'No description provided.') ?></p>
+        </div>
+        <!-- Required Documents Checklist Config -->
+        <div class="mt-4 pt-3 border-top mb-4">
+          <label class="form-label text-muted small fw-bold mb-2"><i class="fas fa-tasks me-1 text-primary"></i> Required Documents</label>
+          <form action="workflow-builder.php?work_type_id=<?= $selectedWorkTypeId ?>" method="POST">
+            <input type="hidden" name="update_required_docs" value="1">
+            <div class="d-flex flex-column gap-2 mb-3 bg-light p-3 rounded" style="max-height: 200px; overflow-y: auto;">
+              <?php 
+              // Fetch all document types
+              $allDocTypes = $db->query("SELECT * FROM document_types ORDER BY name ASC")->fetchAll();
+              // Fetch currently selected required doc IDs for this work type
+              $stmtReq = $db->prepare("SELECT document_type_id FROM work_type_required_docs WHERE work_type_id = :wt");
+              $stmtReq->execute(['wt' => $selectedWorkTypeId]);
+              $currentReqDocIds = $stmtReq->fetchAll(PDO::FETCH_COLUMN);
+
+              if (empty($allDocTypes)):
+              ?>
+                <small class="text-muted">No document types defined. <a href="document-types.php">Create some here</a>.</small>
+              <?php 
+              else:
+                foreach ($allDocTypes as $docType): 
+                  $isChecked = in_array($docType['id'], $currentReqDocIds) ? 'checked' : '';
+                ?>
+                  <div class="form-check">
+                    <input class="form-check-input" type="checkbox" name="required_doc_ids[]" value="<?= $docType['id'] ?>" id="req_doc_<?= $docType['id'] ?>" <?= $isChecked ?>>
+                    <label class="form-check-label small fw-semibold text-dark" for="req_doc_<?= $docType['id'] ?>">
+                      <?= htmlspecialchars($docType['name']) ?>
+                      <?= $docType['is_mandatory'] ? '<span class="text-danger">*</span>' : '' ?>
+                    </label>
+                  </div>
+                <?php 
+                endforeach; 
+              endif;
+              ?>
+            </div>
+            <?php if (!empty($allDocTypes)): ?>
+              <button type="submit" class="btn btn-primary btn-sm w-100 fw-bold shadow-sm">
+                <i class="fas fa-save me-1"></i> Save Required Docs
+              </button>
+            <?php endif; ?>
+          </form>
         </div>
         <div class="p-3 bg-light rounded mt-auto">
           <small class="text-muted d-block fw-bold mb-1"><i class="fas fa-lightbulb text-warning me-1"></i> How Workflow Transfer Works:</small>

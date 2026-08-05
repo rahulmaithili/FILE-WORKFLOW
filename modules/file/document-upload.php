@@ -4,7 +4,8 @@ require_once __DIR__ . '/../../includes/header.php';
 
 $db = getDB();
 $user = getLoggedInUser();
-$fileId = intval($_GET['file_id'] ?? 0);
+$fileId = intval($_GET['file_id'] ?? $_POST['file_id'] ?? 0);
+$docTypeId = intval($_GET['document_type_id'] ?? $_POST['document_type_id'] ?? 0);
 
 $stmtFile = $db->prepare("SELECT * FROM files WHERE id = :id LIMIT 1");
 $stmtFile->execute(['id' => $fileId]);
@@ -14,6 +15,13 @@ if (!$file) {
     echo "<div class='alert alert-danger'>File not found!</div>";
     require_once __DIR__ . '/../../includes/footer.php';
     exit;
+}
+
+$docType = null;
+if ($docTypeId > 0) {
+    $stmtDt = $db->prepare("SELECT * FROM document_types WHERE id = :id LIMIT 1");
+    $stmtDt->execute(['id' => $docTypeId]);
+    $docType = $stmtDt->fetch();
 }
 
 // Handle File Upload or Camera Scan Submit
@@ -31,12 +39,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $destination = DOC_UPLOAD_DIR . $newFileName;
 
         if (file_put_contents($destination, $decodedImage)) {
-            $stmtDoc = $db->prepare("INSERT INTO file_documents (file_id, document_name, file_path, uploaded_by) VALUES (:fid, :dname, :fpath, :uby)");
+            $stmtDoc = $db->prepare("INSERT INTO file_documents (file_id, document_name, file_path, uploaded_by, document_type_id) VALUES (:fid, :dname, :fpath, :uby, :doc_type_id)");
             $stmtDoc->execute([
                 'fid' => $fileId,
-                'dname' => $docName ?: ('Camera Scan - ' . date('d M Y H:i')),
+                'dname' => $docName ?: ($docType ? $docType['name'] : ('Camera Scan - ' . date('d M Y H:i'))),
                 'fpath' => 'uploads/documents/' . $newFileName,
-                'uby' => $user['id']
+                'uby' => $user['id'],
+                'doc_type_id' => $docTypeId > 0 ? $docTypeId : null
             ]);
             setFlashMessage('success', 'Scanned document uploaded successfully!');
             header("Location: view.php?id=" . $fileId);
@@ -52,12 +61,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $destination = DOC_UPLOAD_DIR . $newFileName;
 
         if (move_uploaded_file($fileTmp, $destination)) {
-            $stmtDoc = $db->prepare("INSERT INTO file_documents (file_id, document_name, file_path, uploaded_by) VALUES (:fid, :dname, :fpath, :uby)");
+            $stmtDoc = $db->prepare("INSERT INTO file_documents (file_id, document_name, file_path, uploaded_by, document_type_id) VALUES (:fid, :dname, :fpath, :uby, :doc_type_id)");
             $stmtDoc->execute([
                 'fid' => $fileId,
-                'dname' => $docName ?: $fileName,
+                'dname' => $docName ?: ($docType ? $docType['name'] : $fileName),
                 'fpath' => 'uploads/documents/' . $newFileName,
-                'uby' => $user['id']
+                'uby' => $user['id'],
+                'doc_type_id' => $docTypeId > 0 ? $docTypeId : null
             ]);
             setFlashMessage('success', 'Document attached successfully!');
             header("Location: view.php?id=" . $fileId);
@@ -74,17 +84,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <div class="card border-0 shadow-lg p-4" style="border-radius: var(--radius-lg);">
       <div class="d-flex justify-content-between align-items-center border-bottom pb-3 mb-4">
         <div>
-          <h4 class="fw-bold mb-1 text-dark"><i class="fas fa-paperclip text-primary me-2"></i> Attach Document / Scan</h4>
+          <h4 class="fw-bold mb-1 text-dark">
+            <i class="fas fa-paperclip text-primary me-2"></i> 
+            <?= $docType ? ('Scan / Upload: ' . htmlspecialchars($docType['name'])) : 'Attach Document / Scan' ?>
+          </h4>
           <span class="fw-bold text-primary"><?= htmlspecialchars($file['file_code']) ?></span> &bull; Customer: <strong><?= htmlspecialchars($file['customer_name']) ?></strong>
         </div>
       </div>
 
-      <form action="document-upload.php?file_id=<?= $fileId ?>" method="POST" enctype="multipart/form-data">
+      <form action="document-upload.php?file_id=<?= $fileId ?>&document_type_id=<?= $docTypeId ?>" method="POST" enctype="multipart/form-data">
         <input type="hidden" name="scanned_image_base64" id="scannedImageBase64">
+        <input type="hidden" name="file_id" value="<?= $fileId ?>">
+        <input type="hidden" name="document_type_id" value="<?= $docTypeId ?>">
 
         <div class="mb-3">
           <label class="form-label fw-bold">Document Title / Name</label>
-          <input type="text" name="document_name" class="form-control" placeholder="e.g. Verified Aadhaar Card / Site Photo">
+          <input type="text" name="document_name" class="form-control" value="<?= $docType ? htmlspecialchars($docType['name']) : '' ?>" placeholder="e.g. Verified Aadhaar Card / Site Photo">
         </div>
 
         <!-- Option 1: File Upload -->
