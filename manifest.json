@@ -1,0 +1,17 @@
+{
+  "name": "Office File Management CRM",
+  "short_name": "File CRM",
+  "description": "Premium workflow task and file tracking application",
+  "start_url": "./index.php",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#2563eb",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "./assets/app_logo_icon.jpg",
+      "sizes": "512x512",
+      "type": "image/jpeg"
+    }
+  ]
+}
