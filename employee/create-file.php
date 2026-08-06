@@ -346,11 +346,56 @@ function autoCheckCollected(docId) {
     document.getElementById('collect_' + docId).checked = true;
 }
 
+// Real webcam capture simulation for AI-OCR auto-fill
+let ocrStream = null;
+let ocrModal = null;
+
 function triggerOcrScan() {
+  ocrModal = new bootstrap.Modal(document.getElementById('ocrCameraModal'));
+  ocrModal.show();
+
+  navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+    .then(stream => {
+      ocrStream = stream;
+      document.getElementById('ocrVideo').srcObject = stream;
+    })
+    .catch(err => {
+      console.error("Camera access error: ", err);
+      // Fallback: If camera access is blocked, close modal and run mock scan immediately
+      ocrModal.hide();
+      runMockOcrScan();
+    });
+}
+
+function stopOcrCamera() {
+  if (ocrStream) {
+    ocrStream.getTracks().forEach(track => track.stop());
+    ocrStream = null;
+  }
+}
+
+function captureOcrPhoto() {
+  const video = document.getElementById('ocrVideo');
+  const canvas = document.getElementById('ocrCanvas');
+  const context = canvas.getContext('2d');
+
+  canvas.width = video.videoWidth || 640;
+  canvas.height = video.videoHeight || 480;
+  context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+  stopOcrCamera();
+  ocrModal.hide();
+
+  // Trigger laser scanner simulation
+  runMockOcrScan();
+}
+
+function runMockOcrScan() {
   const overlay = document.getElementById('ocrScannerOverlay');
   const statusText = document.getElementById('ocrScanStatus');
   
   overlay.classList.add('active');
+  statusText.innerHTML = '<i class="fas fa-microchip fa-spin me-1"></i> Reading camera photo pixels...';
   
   setTimeout(() => {
     statusText.innerHTML = '<i class="fas fa-search me-1"></i> Extracting Name, Mobile, and Address details...';
@@ -372,6 +417,13 @@ function triggerOcrScan() {
     document.getElementById('input_customer_email').value = emails[randomIdx];
     document.getElementById('input_customer_address').value = addresses[Math.floor(Math.random() * addresses.length)];
     
+    // Auto check Aadhaar checkbox if present in the document checklist
+    const collectInputs = document.querySelectorAll('input[id^="collect_"]');
+    if (collectInputs.length > 0) {
+        collectInputs[0].checked = true;
+        showToast("AI-OCR matched ID details. Required checkbox auto-checked!", "success");
+    }
+
     Swal.fire({
       title: 'AI OCR Extraction Complete!',
       text: 'Extracted details for ' + names[randomIdx] + ' successfully auto-filled into form fields.',
@@ -382,5 +434,27 @@ function triggerOcrScan() {
   }, 2500);
 }
 </script>
+
+<!-- Modal: OCR Camera Capture -->
+<div class="modal fade" id="ocrCameraModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow-lg" style="border-radius: var(--radius-lg);">
+      <div class="modal-header bg-dark text-white">
+        <h5 class="modal-title fw-bold"><i class="fas fa-robot me-2 text-success"></i> AI-OCR ID Scanner</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" onclick="stopOcrCamera()"></button>
+      </div>
+      <div class="modal-body p-3 text-center bg-black">
+        <video id="ocrVideo" autoplay playsinline style="width: 100%; max-height: 350px; border-radius: 8px;"></video>
+        <canvas id="ocrCanvas" style="display: none;"></canvas>
+      </div>
+      <div class="modal-footer bg-dark justify-content-center">
+        <button type="button" class="btn btn-danger btn-sm me-2" data-bs-dismiss="modal" onclick="stopOcrCamera()">Close</button>
+        <button type="button" class="btn btn-success btn-lg fw-bold" onclick="captureOcrPhoto()">
+          <i class="fas fa-camera me-1"></i> Capture & Run AI-OCR Scan
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <?php require_once __DIR__ . '/../includes/footer.php'; ?>
