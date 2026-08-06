@@ -111,11 +111,11 @@ $matrixModules = [
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
-  border-radius: 6px;
+  width: 28px;
+  height: 28px;
+  border-radius: 5px;
   font-weight: 700;
-  font-size: 0.8rem;
+  font-size: 0.75rem;
   color: #94a3b8;
   border: 1px solid #cbd5e1;
   background: #ffffff;
@@ -157,6 +157,12 @@ $matrixModules = [
 .table-active-soft {
   background-color: #f8fafc !important;
 }
+
+/* Fluid Responsive Sizing Overrides */
+.matrix-table th, .matrix-table td {
+  padding: 0.45rem 0.2rem !important;
+  font-size: 0.8rem;
+}
 </style>
 
 <div class="d-flex justify-content-between align-items-center mb-4">
@@ -172,13 +178,13 @@ $matrixModules = [
 <form action="roles.php" method="POST">
   <input type="hidden" name="save_matrix" value="1">
   
-  <div class="card border-0 shadow-sm p-4" style="border-radius: var(--radius-lg);">
+  <div class="card border-0 shadow-sm p-3 p-md-4" style="border-radius: var(--radius-lg);">
     <div class="table-responsive">
-      <table class="table table-bordered align-middle text-center mb-0" style="border-collapse: separate; border-spacing: 0; min-width: 800px;">
+      <table class="table table-bordered align-middle text-center mb-0 matrix-table" style="border-collapse: separate; border-spacing: 0; width: 100%; table-layout: auto;">
         <thead>
           <!-- Top Row: Role Badges -->
           <tr class="table-light">
-            <th rowspan="2" class="text-start align-middle bg-light" style="min-width: 250px; border-bottom: 2px solid #cbd5e1;">Module / Function</th>
+            <th rowspan="2" class="text-start align-middle bg-light" style="min-width: 160px; width: 28%; border-bottom: 2px solid #cbd5e1;">Module / Function</th>
             <?php foreach ($roles as $role): 
               $badgeClass = 'bg-primary';
               if ($role['role_key'] === 'employee') $badgeClass = 'bg-success';
