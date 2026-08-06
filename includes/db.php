@@ -125,6 +125,17 @@ class Database {
                 // Ignore if it fails
             }
         }
+
+        // 5. Ensure permissions column exists in users table for user-specific overrides
+        try {
+            $db->query("SELECT permissions FROM users LIMIT 1");
+        } catch (Exception $e) {
+            try {
+                $db->exec("ALTER TABLE users ADD COLUMN permissions TEXT NULL;");
+            } catch (Exception $ex) {
+                // Ignore if it fails
+            }
+        }
     }
 
     private static function connect(): PDO {

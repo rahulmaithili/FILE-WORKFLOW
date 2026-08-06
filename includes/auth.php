@@ -82,7 +82,7 @@ function canAccessFile(array $file): bool {
 function loginUser(string $email, string $password): array {
     $db = getDB();
     $stmt = $db->prepare("
-        SELECT u.*, r.role_name, r.role_key, r.permissions 
+        SELECT u.*, u.permissions as user_permissions, r.role_name, r.role_key, r.permissions as role_permissions 
         FROM users u 
         JOIN roles r ON u.role_id = r.id 
         WHERE u.email = :email AND u.status = 'active' 
@@ -92,8 +92,12 @@ function loginUser(string $email, string $password): array {
     $user = $stmt->fetch();
 
     if ($user && password_verify($password, $user['password'])) {
-        // Parse permissions array
-        $user['permissions'] = json_decode($user['permissions'] ?? '[]', true) ?: [];
+        // Parse permissions array: user override first, fallback to role default
+        $userPerms = json_decode($user['user_permissions'] ?? '[]', true) ?: [];
+        if (empty($userPerms)) {
+            $userPerms = json_decode($user['role_permissions'] ?? '[]', true) ?: [];
+        }
+        $user['permissions'] = $userPerms;
         
         $_SESSION['user_id'] = $user['id'];
         $_SESSION['user'] = $user;

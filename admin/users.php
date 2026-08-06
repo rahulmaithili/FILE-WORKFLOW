@@ -69,6 +69,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_role_permissions
     exit;
 }
 
+// Handle Individual User Custom Permissions Update
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_user_permissions'])) {
+    $targetUserId = intval($_POST['target_user_id'] ?? 0);
+    $userPermsList = $_POST['user_perms'] ?? []; // Array of permission strings
+    
+    if ($targetUserId > 0) {
+        $permsJson = json_encode($userPermsList);
+        $stmtUserPerm = $db->prepare("UPDATE users SET permissions = :perms WHERE id = :id");
+        $stmtUserPerm->execute(['perms' => $permsJson, 'id' => $targetUserId]);
+        
+        // If they are updating their own permissions, sync the session
+        if ($targetUserId == $_SESSION['user_id']) {
+            $_SESSION['user']['permissions'] = $userPermsList;
+        }
+        
+        setFlashMessage('success', 'Employee access permissions updated successfully.');
+    }
+    header("Location: users.php");
+    exit;
+}
+
 // Handle User Creation / Edit
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $name = sanitize($_POST['name'] ?? '');
@@ -102,7 +123,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 $users = $db->query("
-    SELECT u.*, r.role_name, b.branch_name 
+    SELECT u.*, r.role_name, r.role_key, r.permissions as role_permissions 
     FROM users u 
     JOIN roles r ON u.role_id = r.id 
     LEFT JOIN branches b ON u.branch_id = b.id
@@ -171,6 +192,9 @@ $branches = $db->query("SELECT * FROM branches ORDER BY branch_name ASC")->fetch
             <td><small class="text-muted"><?= date('d M Y', strtotime($u['created_at'])) ?></small></td>
             <td class="text-end">
               <div class="btn-group btn-group-sm">
+                <button class="btn btn-light text-secondary border" onclick="manageAccess(<?= htmlspecialchars(json_encode($u)) ?>)" title="Manage Custom Permissions">
+                  <i class="fas fa-user-shield me-1"></i> Access
+                </button>
                 <button class="btn btn-light text-primary border" onclick="editUser(<?= htmlspecialchars(json_encode($u)) ?>)">
                   <i class="fas fa-edit me-1"></i> Edit
                 </button>
@@ -276,6 +300,41 @@ function editUser(user) {
   const modal = new bootstrap.Modal(document.getElementById('userModal'));
   modal.show();
 }
+
+function manageAccess(user) {
+  document.getElementById('perm_user_id').value = user.id;
+  document.getElementById('perm_user_name').innerText = user.name;
+
+  // Parse custom user permissions
+  let userPerms = [];
+  try {
+    userPerms = JSON.parse(user.permissions || '[]');
+  } catch (e) {
+    userPerms = [];
+  }
+
+  // If empty, fallback to default role permissions
+  if (userPerms.length === 0) {
+    try {
+      userPerms = JSON.parse(user.role_permissions || '[]');
+    } catch (e) {}
+  }
+
+  // Check / uncheck checkboxes
+  document.getElementById('uperm_create_file').checked = userPerms.includes('create_file') || userPerms.includes('*');
+  document.getElementById('uperm_scan_document').checked = userPerms.includes('scan_document') || userPerms.includes('*');
+  document.getElementById('uperm_delete_file').checked = userPerms.includes('delete_file') || userPerms.includes('*');
+  document.getElementById('uperm_manage_users').checked = userPerms.includes('manage_users') || userPerms.includes('*');
+
+  // Super Admin protection (cannot edit/override)
+  const isSuperAdmin = user.role_key === 'super_admin';
+  document.querySelectorAll('#userPermissionsModal input[type="checkbox"]').forEach(cb => {
+    cb.disabled = isSuperAdmin;
+  });
+
+  const modal = new bootstrap.Modal(document.getElementById('userPermissionsModal'));
+  modal.show();
+}
 </script>
 
 <!-- Modal: Permissions Builder -->
@@ -343,6 +402,59 @@ function editUser(user) {
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
           <button type="submit" class="btn btn-primary fw-bold shadow-sm">
             <i class="fas fa-save me-1"></i> Save Roles & Permissions
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Custom User Permissions Builder -->
+<div class="modal fade" id="userPermissionsModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content border-0 shadow-lg" style="border-radius: var(--radius-lg);">
+      <form action="users.php" method="POST">
+        <input type="hidden" name="save_user_permissions" value="1">
+        <input type="hidden" name="target_user_id" id="perm_user_id">
+        <div class="modal-header bg-dark text-white">
+          <h5 class="modal-title fw-bold"><i class="fas fa-user-shield text-warning me-2"></i> Customize Employee Access</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body p-4">
+          <h6 class="fw-bold text-dark mb-1">Employee: <span id="perm_user_name" class="text-primary"></span></h6>
+          <p class="text-muted small mb-4">Override default role privileges specifically for this employee.</p>
+
+          <div class="d-flex flex-column gap-3 bg-light p-3 rounded">
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" name="user_perms[]" value="create_file" id="uperm_create_file">
+              <label class="form-check-label fw-semibold text-dark small" for="uperm_create_file">
+                Create Customer Files
+              </label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" name="user_perms[]" value="scan_document" id="uperm_scan_document">
+              <label class="form-check-label fw-semibold text-dark small" for="uperm_scan_document">
+                Scan & Upload Documents
+              </label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" name="user_perms[]" value="delete_file" id="uperm_delete_file">
+              <label class="form-check-label fw-semibold text-dark small" for="uperm_delete_file">
+                Delete Customer Files
+              </label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" name="user_perms[]" value="manage_users" id="uperm_manage_users">
+              <label class="form-check-label fw-semibold text-dark small" for="uperm_manage_users">
+                Manage Users & System Settings
+              </label>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer bg-light">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary fw-bold shadow-sm">
+            <i class="fas fa-save me-1"></i> Save Custom Access
           </button>
         </div>
       </form>
