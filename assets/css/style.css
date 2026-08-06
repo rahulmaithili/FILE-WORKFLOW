@@ -1011,6 +1011,77 @@ body {
   animation: premium-popup-hide 0.26s cubic-bezier(0.25, 1, 0.5, 1) forwards !important;
 }
 
+/* ==========================================
+   CHEVRON ARROW PIPELINE NAVIGATION (MATCHING SCREENSHOT)
+   ========================================== */
+.chevron-nav {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 5px;
+  background: #f8fafc;
+  padding: 10px;
+  border-radius: 12px;
+  list-style: none;
+  border: 1px solid #e2e8f0;
+}
+
+.chevron-nav-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 24px 10px 32px;
+  color: #475569 !important;
+  background: #e2e8f0;
+  font-weight: 700;
+  font-size: 0.74rem;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  text-decoration: none !important;
+  cursor: pointer;
+  clip-path: polygon(0% 0%, calc(100% - 12px) 0%, 100% 50%, calc(100% - 12px) 100%, 0% 100%, 12px 50%);
+  transition: all 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+  min-height: 38px;
+  user-select: none;
+}
+
+.chevron-nav-item:first-child {
+  padding-left: 20px;
+  clip-path: polygon(0% 0%, calc(100% - 12px) 0%, 100% 50%, calc(100% - 12px) 100%, 0% 100%);
+  border-top-left-radius: 8px;
+  border-bottom-left-radius: 8px;
+}
+
+.chevron-nav-item:last-child {
+  border-top-right-radius: 8px;
+  border-bottom-right-radius: 8px;
+}
+
+.chevron-nav-item:hover {
+  background: #cbd5e1;
+  color: #1e293b !important;
+}
+
+/* Chevron Color Variations matching user screenshot */
+.chevron-all { background-color: #3e3333; color: #ffffff !important; }
+.chevron-all.active { background-color: #1c1515; }
+
+.chevron-draft { background-color: #64748b; color: #ffffff !important; }
+.chevron-draft.active { background-color: #334155; }
+
+.chevron-available { background-color: #0d9488; color: #ffffff !important; }
+.chevron-available.active { background-color: #0f766e; }
+
+.chevron-sold { background-color: #8b5cf6; color: #ffffff !important; }
+.chevron-sold.active { background-color: #6d28d9; }
+
+.chevron-rented { background-color: #0891b2; color: #ffffff !important; }
+.chevron-rented.active { background-color: #0e7490; }
+
+.chevron-withdrawn { background-color: #e11d48; color: #ffffff !important; }
+.chevron-withdrawn.active { background-color: #be123c; }
+
 
 
 

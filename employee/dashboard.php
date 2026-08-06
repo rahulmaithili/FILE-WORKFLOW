@@ -54,17 +54,17 @@ if ($xp >= 1000) {
     $tierIcon = 'fa-crown';
 }
 
-// Fetch files assigned to logged-in user
+// Fetch files assigned to logged-in user (all statuses)
 $stmtFiles = $db->prepare("
     SELECT f.*, wt.name as work_type_name, ws.stage_name 
     FROM files f 
     LEFT JOIN work_types wt ON f.work_type_id = wt.id 
     LEFT JOIN workflow_stages ws ON f.current_stage_id = ws.id 
-    WHERE f.current_assigned_user = :uid AND f.status IN ('pending', 'in_progress') 
+    WHERE f.current_assigned_user = :uid
     ORDER BY f.updated_at DESC
 ");
 $stmtFiles->execute(['uid' => $userId]);
-$myPendingFiles = $stmtFiles->fetchAll();
+$myFiles = $stmtFiles->fetchAll();
 ?>
 
 <div class="row g-4 mb-4">
@@ -105,6 +105,17 @@ $myPendingFiles = $stmtFiles->fetchAll();
   </div>
 </div>
 
+<!-- Chevron Pipeline Status Filter Tabs (Matching User Screenshot) -->
+<div class="mb-4 overflow-auto">
+  <div class="chevron-nav py-2 d-flex flex-nowrap" id="statusFilterNav" style="min-width: 750px;">
+    <a class="chevron-nav-item chevron-all active" data-status="all">All (<?= count($myFiles) ?>)</a>
+    <a class="chevron-nav-item chevron-draft" data-status="pending">Pending (<?= count(array_filter($myFiles, fn($f) => $f['status'] === 'pending')) ?>)</a>
+    <a class="chevron-nav-item chevron-available" data-status="in_progress">In Progress (<?= count(array_filter($myFiles, fn($f) => $f['status'] === 'in_progress')) ?>)</a>
+    <a class="chevron-nav-item chevron-sold" data-status="completed">Completed (<?= count(array_filter($myFiles, fn($f) => $f['status'] === 'completed')) ?>)</a>
+    <a class="chevron-nav-item chevron-withdrawn" data-status="rejected">Rejected (<?= count(array_filter($myFiles, fn($f) => $f['status'] === 'rejected')) ?>)</a>
+  </div>
+</div>
+
 <div class="card border-0 shadow-sm p-4" style="border-radius: var(--radius-lg);">
   <div class="d-flex justify-content-between align-items-center mb-3">
     <div>
@@ -130,18 +141,17 @@ $myPendingFiles = $stmtFiles->fetchAll();
           <th class="text-end">Forward & Actions</th>
         </tr>
       </thead>
-      <tbody>
-        <?php if (empty($myPendingFiles)): ?>
+      <tbody id="filesTableBody">
+        <?php if (empty($myFiles)): ?>
           <tr>
             <td colspan="6" class="text-center py-5 text-muted">
               <i class="fas fa-check-circle fa-3x mb-3 text-success opacity-50"></i>
-              <h6>No pending files assigned to you!</h6>
-              <p class="small">Great job! All assigned cases are up to date.</p>
+              <h6>No files assigned to you!</h6>
             </td>
           </tr>
         <?php else: ?>
-          <?php foreach ($myPendingFiles as $f): ?>
-            <tr>
+          <?php foreach ($myFiles as $f): ?>
+            <tr data-file-status="<?= htmlspecialchars($f['status']) ?>">
               <td>
                 <a href="<?= APP_URL ?>/modules/file/view.php?id=<?= $f['id'] ?>" class="fw-bold text-primary text-decoration-none">
                   <?= htmlspecialchars($f['file_code']) ?>
@@ -159,16 +169,58 @@ $myPendingFiles = $stmtFiles->fetchAll();
                 <a href="<?= APP_URL ?>/modules/file/view.php?id=<?= $f['id'] ?>" class="btn btn-sm btn-light text-primary me-1" title="View Case">
                   <i class="fas fa-eye"></i> View
                 </a>
-                <a href="<?= APP_URL ?>/modules/file/forward.php?id=<?= $f['id'] ?>" class="btn btn-sm btn-primary fw-semibold" title="Forward File">
-                  <i class="fas fa-paper-plane me-1"></i> Forward Step
-                </a>
+                <?php if (in_array($f['status'], ['pending', 'in_progress'])): ?>
+                  <a href="<?= APP_URL ?>/modules/file/forward.php?id=<?= $f['id'] ?>" class="btn btn-sm btn-primary fw-semibold" title="Forward File">
+                    <i class="fas fa-paper-plane me-1"></i> Forward Step
+                  </a>
+                <?php endif; ?>
               </td>
             </tr>
           <?php endforeach; ?>
         <?php endif; ?>
+        <tr id="noFilesMessage" class="d-none">
+          <td colspan="6" class="text-center py-5 text-muted">
+            <i class="fas fa-folder-open fa-3x mb-3 text-secondary opacity-50"></i>
+            <h6>No files found in this category.</h6>
+          </td>
+        </tr>
       </tbody>
     </table>
   </div>
 </div>
+
+<script>
+document.querySelectorAll('#statusFilterNav .chevron-nav-item').forEach(item => {
+    item.addEventListener('click', function(e) {
+        e.preventDefault();
+        
+        // Remove active class from all tabs
+        document.querySelectorAll('#statusFilterNav .chevron-nav-item').forEach(t => t.classList.remove('active'));
+        // Add active class to clicked tab
+        this.classList.add('active');
+        
+        const filterStatus = this.getAttribute('data-status');
+        const rows = document.querySelectorAll('#filesTableBody tr:not(#noFilesMessage)');
+        let visibleCount = 0;
+        
+        rows.forEach(row => {
+            const rowStatus = row.getAttribute('data-file-status');
+            if (filterStatus === 'all' || rowStatus === filterStatus) {
+                row.style.display = '';
+                visibleCount++;
+            } else {
+                row.style.display = 'none';
+            }
+        });
+        
+        const noFilesMsg = document.getElementById('noFilesMessage');
+        if (visibleCount === 0) {
+            noFilesMsg.classList.remove('d-none');
+        } else {
+            noFilesMsg.classList.add('d-none');
+        }
+    });
+});
+</script>
 
 <?php require_once __DIR__ . '/../includes/footer.php'; ?>

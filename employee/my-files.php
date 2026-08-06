@@ -74,17 +74,28 @@ $workTypes = $db->query("SELECT * FROM work_types ORDER BY name ASC")->fetchAll(
   </div>
 </div>
 
+<!-- Chevron Pipeline Status Filter Tabs (Matching User Screenshot) -->
+<div class="mb-4 overflow-auto">
+  <div class="chevron-nav py-2 d-flex flex-nowrap" id="statusFilterNav" style="min-width: 850px;">
+    <a class="chevron-nav-item chevron-all active" data-status="all">All (<?= count($files) ?>)</a>
+    <a class="chevron-nav-item chevron-draft" data-status="pending">Pending (<?= count(array_filter($files, fn($f) => $f['status'] === 'pending')) ?>)</a>
+    <a class="chevron-nav-item chevron-available" data-status="in_progress">In Progress (<?= count(array_filter($files, fn($f) => $f['status'] === 'in_progress')) ?>)</a>
+    <a class="chevron-nav-item chevron-sold" data-status="completed">Completed (<?= count(array_filter($files, fn($f) => $f['status'] === 'completed')) ?>)</a>
+    <a class="chevron-nav-item chevron-withdrawn" data-status="rejected">Rejected (<?= count(array_filter($files, fn($f) => $f['status'] === 'rejected')) ?>)</a>
+  </div>
+</div>
+
 <!-- Search & Filter Controls -->
 <div class="card border-0 shadow-sm p-3 mb-4" style="border-radius: var(--radius-md);">
   <form action="my-files.php" method="GET" class="row g-2">
-    <div class="col-md-4">
+    <div class="col-md-5">
       <div class="input-group">
         <span class="input-group-text bg-light border-end-0"><i class="fas fa-search text-muted"></i></span>
         <input type="text" name="search" class="form-control bg-light border-start-0" placeholder="Search Code, Name, Mobile..." value="<?= htmlspecialchars($search) ?>">
       </div>
     </div>
 
-    <div class="col-md-3">
+    <div class="col-md-4">
       <select name="work_type_id" class="form-select bg-light">
         <option value="">-- All Work Types --</option>
         <?php foreach ($workTypes as $wt): ?>
@@ -93,18 +104,7 @@ $workTypes = $db->query("SELECT * FROM work_types ORDER BY name ASC")->fetchAll(
       </select>
     </div>
 
-    <div class="col-md-3">
-      <select name="status" class="form-select bg-light">
-        <option value="">-- All Statuses --</option>
-        <option value="pending" <?= $statusFilter === 'pending' ? 'selected' : '' ?>>Pending</option>
-        <option value="in_progress" <?= $statusFilter === 'in_progress' ? 'selected' : '' ?>>In Progress</option>
-        <option value="on_hold" <?= $statusFilter === 'on_hold' ? 'selected' : '' ?>>On Hold</option>
-        <option value="completed" <?= $statusFilter === 'completed' ? 'selected' : '' ?>>Completed</option>
-        <option value="rejected" <?= $statusFilter === 'rejected' ? 'selected' : '' ?>>Rejected</option>
-      </select>
-    </div>
-
-    <div class="col-md-2 d-flex gap-2">
+    <div class="col-md-3 d-flex gap-2">
       <button type="submit" class="btn btn-primary w-100 fw-semibold">Filter</button>
       <a href="my-files.php" class="btn btn-light border text-muted" title="Reset Filters"><i class="fas fa-redo"></i></a>
     </div>
@@ -126,7 +126,7 @@ $workTypes = $db->query("SELECT * FROM work_types ORDER BY name ASC")->fetchAll(
           <th class="text-end">Quick Action Buttons</th>
         </tr>
       </thead>
-      <tbody>
+      <tbody id="filesTableBody">
         <?php if (empty($files)): ?>
           <tr>
             <td colspan="7" class="text-center py-5 text-muted">
@@ -136,7 +136,7 @@ $workTypes = $db->query("SELECT * FROM work_types ORDER BY name ASC")->fetchAll(
           </tr>
         <?php else: ?>
           <?php foreach ($files as $file): ?>
-            <tr>
+            <tr data-file-status="<?= htmlspecialchars($file['status']) ?>">
               <td>
                 <a href="<?= APP_URL ?>/modules/file/view.php?id=<?= $file['id'] ?>" class="fw-bold text-primary text-decoration-none">
                   <?= htmlspecialchars($file['file_code']) ?>
@@ -189,9 +189,49 @@ $workTypes = $db->query("SELECT * FROM work_types ORDER BY name ASC")->fetchAll(
             </tr>
           <?php endforeach; ?>
         <?php endif; ?>
+        <tr id="noFilesMessage" class="d-none">
+          <td colspan="7" class="text-center py-5 text-muted">
+            <i class="fas fa-folder-open fa-3x mb-3 text-secondary opacity-50"></i>
+            <h6>No files found in this category.</h6>
+          </td>
+        </tr>
       </tbody>
     </table>
   </div>
 </div>
+
+<script>
+document.querySelectorAll('#statusFilterNav .chevron-nav-item').forEach(item => {
+    item.addEventListener('click', function(e) {
+        e.preventDefault();
+        
+        // Remove active class from all tabs
+        document.querySelectorAll('#statusFilterNav .chevron-nav-item').forEach(t => t.classList.remove('active'));
+        // Add active class to clicked tab
+        this.classList.add('active');
+        
+        const filterStatus = this.getAttribute('data-status');
+        const rows = document.querySelectorAll('#filesTableBody tr:not(#noFilesMessage)');
+        let visibleCount = 0;
+        
+        rows.forEach(row => {
+            const rowStatus = row.getAttribute('data-file-status');
+            if (filterStatus === 'all' || rowStatus === filterStatus) {
+                row.style.display = '';
+                visibleCount++;
+            } else {
+                row.style.display = 'none';
+            }
+        });
+        
+        const noFilesMsg = document.getElementById('noFilesMessage');
+        if (visibleCount === 0) {
+            noFilesMsg.classList.remove('d-none');
+        } else {
+            noFilesMsg.classList.add('d-none');
+        }
+    });
+});
+</script>
 
 <?php require_once __DIR__ . '/../includes/footer.php'; ?>
