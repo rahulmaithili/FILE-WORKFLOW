@@ -23,14 +23,26 @@ $stmtOnlineCount->execute(['limit' => $timeLimit]);
 $onlineCount = $stmtOnlineCount->fetchColumn();
 
 // Compute Gamification Metrics (XP Ratings)
-$stmtOverdue = $db->prepare("
-    SELECT COUNT(*) 
-    FROM files f
-    LEFT JOIN workflow_stages ws ON f.current_stage_id = ws.id
-    WHERE f.current_assigned_user = :uid 
-      AND f.status NOT IN ('completed', 'rejected')
-      AND ( (julianday('now') - julianday(f.updated_at)) * 24.0 > ws.sla_hours )
-");
+$driver = $db->getAttribute(PDO::ATTR_DRIVER_NAME);
+if ($driver === 'mysql') {
+    $stmtOverdue = $db->prepare("
+        SELECT COUNT(*) 
+        FROM files f
+        LEFT JOIN workflow_stages ws ON f.current_stage_id = ws.id
+        WHERE f.current_assigned_user = :uid 
+          AND f.status NOT IN ('completed', 'rejected')
+          AND ( TIMESTAMPDIFF(HOUR, f.updated_at, NOW()) > ws.sla_hours )
+    ");
+} else {
+    $stmtOverdue = $db->prepare("
+        SELECT COUNT(*) 
+        FROM files f
+        LEFT JOIN workflow_stages ws ON f.current_stage_id = ws.id
+        WHERE f.current_assigned_user = :uid 
+          AND f.status NOT IN ('completed', 'rejected')
+          AND ( (julianday('now') - julianday(f.updated_at)) * 24.0 > ws.sla_hours )
+    ");
+}
 $stmtOverdue->execute(['uid' => $userId]);
 $overdueCount = intval($stmtOverdue->fetchColumn());
 

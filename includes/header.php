@@ -20,14 +20,26 @@ if (isset($_SESSION['user_id'])) {
     $notificationsList = $stmtNotifList->fetchAll();
 
     // Fetch Overdue Cases Count for the Logged-in Employee
-    $stmtOverdue = $db->prepare("
-        SELECT COUNT(*) 
-        FROM files f
-        LEFT JOIN workflow_stages ws ON f.current_stage_id = ws.id
-        WHERE f.current_assigned_user = :uid 
-          AND f.status NOT IN ('completed', 'rejected')
-          AND ( (julianday('now') - julianday(f.updated_at)) * 24.0 > ws.sla_hours )
-    ");
+    $driver = $db->getAttribute(PDO::ATTR_DRIVER_NAME);
+    if ($driver === 'mysql') {
+        $stmtOverdue = $db->prepare("
+            SELECT COUNT(*) 
+            FROM files f
+            LEFT JOIN workflow_stages ws ON f.current_stage_id = ws.id
+            WHERE f.current_assigned_user = :uid 
+              AND f.status NOT IN ('completed', 'rejected')
+              AND ( TIMESTAMPDIFF(HOUR, f.updated_at, NOW()) > ws.sla_hours )
+        ");
+    } else {
+        $stmtOverdue = $db->prepare("
+            SELECT COUNT(*) 
+            FROM files f
+            LEFT JOIN workflow_stages ws ON f.current_stage_id = ws.id
+            WHERE f.current_assigned_user = :uid 
+              AND f.status NOT IN ('completed', 'rejected')
+              AND ( (julianday('now') - julianday(f.updated_at)) * 24.0 > ws.sla_hours )
+        ");
+    }
     $stmtOverdue->execute(['uid' => $_SESSION['user_id']]);
     $overdueCount = intval($stmtOverdue->fetchColumn());
 }
