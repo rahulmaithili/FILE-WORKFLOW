@@ -1082,10 +1082,17 @@ body {
 .chevron-withdrawn { background-color: #e11d48; color: #ffffff !important; }
 .chevron-withdrawn.active { background-color: #be123c; }
 
-
-
-
-
-
-
-
+/* Screen-Fit responsive Kanban columns (removes horizontal scrollbar on desktops) */
+@media (min-width: 992px) {
+  .kanban-board {
+    overflow-x: hidden !important;
+  }
+  .kanban-column {
+    min-width: 0 !important;
+    max-width: none !important;
+    flex: 1 1 0% !important;
+  }
+  .kanban-column-header div {
+    max-width: 100% !important;
+  }
+}
