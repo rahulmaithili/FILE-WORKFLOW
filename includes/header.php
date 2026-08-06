@@ -61,12 +61,13 @@ if (isset($_SESSION['user_id'])) {
   <!-- Custom Style -->
   <link href="<?= APP_URL ?>/assets/css/style.css" rel="stylesheet">
   <!-- PWA Manifest & Service Worker -->
-  <link rel="manifest" href="<?= APP_URL ?>/manifest.json">
+  <link rel="manifest" href="/manifest.json">
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('<?= APP_URL ?>/sw.js')
-          .then(reg => console.log('PWA Service Worker Active'))
+        const swUrl = window.location.origin + '/sw.js';
+        navigator.serviceWorker.register(swUrl)
+          .then(reg => console.log('PWA Service Worker Active: ' + swUrl))
           .catch(err => console.error('PWA Registration Error', err));
       });
     }
