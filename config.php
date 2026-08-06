@@ -15,7 +15,7 @@ define('APP_VERSION', '1.0.0');
 date_default_timezone_set('Asia/Kolkata');
 
 // Database Driver Configuration: 'mysql' or 'sqlite' (Auto-fallback to SQLite if MySQL fails)
-define('DB_DRIVER', 'sqlite'); // sqlite for instant local running, change to mysql for production
+define('DB_DRIVER', 'mysql'); // sqlite for instant local running, change to mysql for production
 
 // MySQL Settings
 define('DB_HOST', '127.0.0.1');
