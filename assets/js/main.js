@@ -165,7 +165,13 @@ if (typeof Swal !== 'undefined') {
     const defaultOptions = {
       background: isDark ? '#1e293b' : '#ffffff',
       color: isDark ? '#f8fafc' : '#1e293b',
-      confirmButtonColor: '#3b82f6',
+      buttonsStyling: false, /* Use custom CSS classes for buttons */
+      customClass: {
+        popup: 'swal-premium-popup-card',
+        title: 'swal-premium-title',
+        confirmButton: 'swal-premium-confirm-btn',
+        cancelButton: 'swal-premium-cancel-btn'
+      },
       showClass: {
         popup: 'swal2-premium-show'
       },
@@ -176,11 +182,12 @@ if (typeof Swal !== 'undefined') {
 
     if (args.length === 1 && typeof args[0] === 'object') {
       const mergedOptions = Object.assign({}, defaultOptions, args[0]);
+      mergedOptions.customClass = Object.assign({}, defaultOptions.customClass, args[0].customClass);
       mergedOptions.showClass = Object.assign({}, defaultOptions.showClass, args[0].showClass);
       mergedOptions.hideClass = Object.assign({}, defaultOptions.hideClass, args[0].hideClass);
       
-      if (args[0].icon === 'warning') {
-        mergedOptions.confirmButtonColor = args[0].confirmButtonColor || '#ef4444';
+      if (args[0].icon === 'warning' || args[0].icon === 'error') {
+        mergedOptions.customClass.confirmButton = 'swal-premium-confirm-btn swal-premium-btn-danger';
       }
       
       return originalFire.call(Swal, mergedOptions);
@@ -190,6 +197,9 @@ if (typeof Swal !== 'undefined') {
         text: args[1] || '',
         icon: args[2] || undefined
       });
+      if (args[2] === 'warning' || args[2] === 'error') {
+        options.customClass.confirmButton = 'swal-premium-confirm-btn swal-premium-btn-danger';
+      }
       return originalFire.call(Swal, options);
     }
   };
