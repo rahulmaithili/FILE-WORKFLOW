@@ -1293,19 +1293,19 @@ body {
   flex-shrink: 0 !important; /* Prevent column squishing */
 }
 
-/* Custom Premium Scrollbar for Kanban Board */
+/* Custom Premium Scrollbar for Kanban Board - Highly Visible */
 .kanban-board::-webkit-scrollbar {
-  height: 8px;
+  height: 12px; /* Thicker scrollbar */
 }
 .kanban-board::-webkit-scrollbar-track {
-  background: #f8fafc;
-  border-radius: 8px;
+  background: #e2e8f0; /* Darker track for clear visual path */
+  border-radius: 10px;
 }
 .kanban-board::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-  border-radius: 8px;
-  border: 1px solid #f8fafc;
+  background: #3b82f6; /* Theme Primary Blue - High Contrast & Visibility */
+  border-radius: 10px;
+  border: 2px solid #e2e8f0;
 }
 .kanban-board::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+  background: #1d4ed8; /* Darker blue on hover */
 }
