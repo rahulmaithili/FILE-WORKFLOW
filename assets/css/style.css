@@ -1077,22 +1077,235 @@ body {
 .chevron-sold.active { background-color: #6d28d9; }
 
 .chevron-rented { background-color: #0891b2; color: #ffffff !important; }
+  animation: badge-flash-loop 1.2s infinite alternate;
+}
+@keyframes badge-flash-loop {
+  0% { opacity: 0.6; }
+  100% { opacity: 1; }
+}
+
+/* ==========================================
+   FLOATING INTERACTIVE CHAT DRAWER
+   ========================================== */
+.floating-chat-trigger {
+  position: fixed;
+  bottom: 25px;
+  right: 25px;
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  color: #ffffff !important;
+  box-shadow: 0 4px 20px rgba(37, 99, 235, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.4rem;
+  cursor: pointer;
+  z-index: 1040;
+  transition: transform 0.22s ease, box-shadow 0.22s ease;
+  border: none;
+}
+.floating-chat-trigger:hover {
+  transform: scale(1.08) translateY(-2px);
+  box-shadow: 0 6px 24px rgba(37, 99, 235, 0.55);
+}
+.chat-drawer-container {
+  position: fixed;
+  top: 0;
+  right: -360px;
+  width: 350px;
+  height: 100vh;
+  background: var(--bg-card);
+  border-left: 1px solid var(--border-color);
+  box-shadow: -5px 0 25px rgba(0,0,0,0.1);
+  z-index: 1050;
+  transition: right 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  flex-direction: column;
+}
+.chat-drawer-container.open {
+  right: 0;
+}
+.chat-drawer-header {
+  padding: 1rem;
+  background: #2563eb;
+  color: #ffffff;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.chat-drawer-body {
+  flex: 1;
+  padding: 1rem;
+  overflow-y: auto;
+  background: var(--bg-main);
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+.chat-drawer-footer {
+  padding: 0.75rem 1rem;
+  background: var(--bg-card);
+  border-top: 1px solid var(--border-color);
+}
+.chat-bubble-mini {
+  padding: 0.6rem 0.8rem;
+  border-radius: 10px;
+  font-size: 0.82rem;
+  max-width: 80%;
+  word-break: break-word;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.02);
+}
+.chat-bubble-mini.me {
+  align-self: flex-end;
+  background: #3b82f6;
+  color: #ffffff;
+}
+.chat-bubble-mini.other {
+  align-self: flex-start;
+  background: var(--bg-card);
+  color: var(--text-main);
+  border: 1px solid var(--border-color);
+}
+
+/* ==========================================
+   ULTRA-PREMIUM SWEETALERT2 POP-UP ANIMATIONS
+   ========================================== */
+@keyframes premium-popup-show {
+  0% {
+    transform: scale(0.82);
+    opacity: 0;
+    filter: blur(5px);
+  }
+  65% {
+    transform: scale(1.03);
+    opacity: 0.92;
+    filter: blur(0px);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+@keyframes premium-popup-hide {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(0.88);
+    opacity: 0;
+    filter: blur(4px);
+  }
+}
+.swal2-premium-show {
+  animation: premium-popup-show 0.45s cubic-bezier(0.34, 1.6, 0.64, 1) forwards !important;
+}
+.swal2-premium-hide {
+  animation: premium-popup-hide 0.26s cubic-bezier(0.25, 1, 0.5, 1) forwards !important;
+}
+
+/* ==========================================
+   CHEVRON ARROW PIPELINE NAVIGATION (MATCHING SCREENSHOT)
+   ========================================== */
+.chevron-nav {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 5px;
+  background: #f8fafc;
+  padding: 10px;
+  border-radius: 12px;
+  list-style: none;
+  border: 1px solid #e2e8f0;
+}
+
+.chevron-nav-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 24px 10px 32px;
+  color: #475569 !important;
+  background: #e2e8f0;
+  font-weight: 700;
+  font-size: 0.74rem;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  text-decoration: none !important;
+  cursor: pointer;
+  clip-path: polygon(0% 0%, calc(100% - 12px) 0%, 100% 50%, calc(100% - 12px) 100%, 0% 100%, 12px 50%);
+  transition: all 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+  min-height: 38px;
+  user-select: none;
+}
+
+.chevron-nav-item:first-child {
+  padding-left: 20px;
+  clip-path: polygon(0% 0%, calc(100% - 12px) 0%, 100% 50%, calc(100% - 12px) 100%, 0% 100%);
+  border-top-left-radius: 8px;
+  border-bottom-left-radius: 8px;
+}
+
+.chevron-nav-item:last-child {
+  border-top-right-radius: 8px;
+  border-bottom-right-radius: 8px;
+}
+
+.chevron-nav-item:hover {
+  background: #cbd5e1;
+  color: #1e293b !important;
+}
+
+/* Chevron Color Variations matching user screenshot */
+.chevron-all { background-color: #3e3333; color: #ffffff !important; }
+.chevron-all.active { background-color: #1c1515; }
+
+.chevron-draft { background-color: #64748b; color: #ffffff !important; }
+.chevron-draft.active { background-color: #334155; }
+
+.chevron-available { background-color: #0d9488; color: #ffffff !important; }
+.chevron-available.active { background-color: #0f766e; }
+
+.chevron-sold { background-color: #8b5cf6; color: #ffffff !important; }
+.chevron-sold.active { background-color: #6d28d9; }
+
+.chevron-rented { background-color: #0891b2; color: #ffffff !important; }
 .chevron-rented.active { background-color: #0e7490; }
 
 .chevron-withdrawn { background-color: #e11d48; color: #ffffff !important; }
 .chevron-withdrawn.active { background-color: #be123c; }
 
-/* Screen-Fit responsive Kanban columns (removes horizontal scrollbar on desktops) */
-@media (min-width: 992px) {
-  .kanban-board {
-    overflow-x: hidden !important;
-  }
-  .kanban-column {
-    min-width: 0 !important;
-    max-width: none !important;
-    flex: 1 1 0% !important;
-  }
-  .kanban-column-header div {
-    max-width: 100% !important;
-  }
+/* Premium Kanban Board scroll and width optimization (Prevents column squishing) */
+.kanban-board {
+  display: flex;
+  gap: 1.25rem;
+  overflow-x: auto !important; /* Allow custom scroll */
+  padding-bottom: 1.5rem;
+  min-height: calc(100vh - 180px);
+}
+
+.kanban-column {
+  width: 270px !important;
+  min-width: 270px !important;
+  max-width: 270px !important;
+  flex-shrink: 0 !important; /* Prevent column squishing */
+}
+
+/* Custom Premium Scrollbar for Kanban Board */
+.kanban-board::-webkit-scrollbar {
+  height: 8px;
+}
+.kanban-board::-webkit-scrollbar-track {
+  background: #f8fafc;
+  border-radius: 8px;
+}
+.kanban-board::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 8px;
+  border: 1px solid #f8fafc;
+}
+.kanban-board::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
 }
