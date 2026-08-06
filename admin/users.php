@@ -42,6 +42,33 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete') {
     exit;
 }
 
+// Handle Dynamic Role & Permissions Updates
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_role_permissions'])) {
+    $rolePermissions = $_POST['role_perms'] ?? []; // Map of role_id => array of permissions
+
+    // Fetch all roles from database
+    $allRoles = $db->query("SELECT * FROM roles")->fetchAll();
+
+    foreach ($allRoles as $role) {
+        $rid = intval($role['id']);
+        if ($role['role_key'] === 'super_admin') continue; // Do not edit super_admin
+
+        // Get permissions chosen for this role, else empty array
+        $permsList = $rolePermissions[$rid] ?? [];
+        
+        // Convert to JSON
+        $permsJson = json_encode($permsList);
+
+        // Update database
+        $stmtRoleUpdate = $db->prepare("UPDATE roles SET permissions = :perms WHERE id = :id");
+        $stmtRoleUpdate->execute(['perms' => $permsJson, 'id' => $rid]);
+    }
+
+    setFlashMessage('success', 'Role permissions updated successfully.');
+    header("Location: users.php");
+    exit;
+}
+
 // Handle User Creation / Edit
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $name = sanitize($_POST['name'] ?? '');
@@ -91,9 +118,14 @@ $branches = $db->query("SELECT * FROM branches ORDER BY branch_name ASC")->fetch
     <h4 class="fw-bold mb-1">Employee Directory</h4>
     <p class="text-muted small mb-0">Add company employees, assign workflow roles, and configure system credentials</p>
   </div>
-  <button class="btn btn-primary fw-semibold shadow-sm" data-bs-toggle="modal" data-bs-target="#userModal" onclick="resetUserForm()">
-    <i class="fas fa-user-plus me-1"></i> Add New Employee
-  </button>
+  <div class="d-flex gap-2">
+    <button class="btn btn-outline-primary fw-semibold shadow-sm" data-bs-toggle="modal" data-bs-target="#permissionsModal">
+      <i class="fas fa-shield-alt me-1"></i> Permissions Builder
+    </button>
+    <button class="btn btn-primary fw-semibold shadow-sm" data-bs-toggle="modal" data-bs-target="#userModal" onclick="resetUserForm()">
+      <i class="fas fa-user-plus me-1"></i> Add New Employee
+    </button>
+  </div>
 </div>
 
 <div class="card border-0 shadow-sm p-4" style="border-radius: var(--radius-lg);">
@@ -245,5 +277,77 @@ function editUser(user) {
   modal.show();
 }
 </script>
+
+<!-- Modal: Permissions Builder -->
+<div class="modal fade" id="permissionsModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content border-0 shadow-lg" style="border-radius: var(--radius-lg);">
+      <form action="users.php" method="POST">
+        <input type="hidden" name="save_role_permissions" value="1">
+        <div class="modal-header bg-primary text-white">
+          <h5 class="modal-title fw-bold"><i class="fas fa-shield-alt me-2"></i> Dynamic Role & Permissions Builder</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body p-4">
+          <p class="text-muted small mb-4">Select the access privileges for each employee role. Updates take effect immediately on next login or action.</p>
+
+          <div class="table-responsive">
+            <table class="table table-bordered align-middle">
+              <thead class="table-light text-center small fw-bold">
+                <tr>
+                  <th class="text-start">Role Type</th>
+                  <th>Create File</th>
+                  <th>Scan Document</th>
+                  <th>Delete File</th>
+                  <th>Manage Settings & Users</th>
+                </tr>
+              </thead>
+              <tbody>
+                <?php foreach ($roles as $r): 
+                  if ($r['role_key'] === 'super_admin') {
+                    $perms = ['*'];
+                    $isLocked = true;
+                  } else {
+                    $perms = json_decode($r['permissions'] ?? '[]', true) ?: [];
+                    $isLocked = false;
+                  }
+                ?>
+                  <tr class="<?= $isLocked ? 'table-light text-muted' : '' ?>">
+                    <td class="text-start fw-bold">
+                      <?= htmlspecialchars($r['role_name']) ?>
+                      <br><small class="fw-normal text-muted" style="font-size: 0.72rem;"><?= htmlspecialchars($r['description']) ?></small>
+                    </td>
+                    <td class="text-center">
+                      <input class="form-check-input" type="checkbox" name="role_perms[<?= $r['id'] ?>][]" value="create_file" 
+                        <?= (in_array('create_file', $perms) || in_array('*', $perms)) ? 'checked' : '' ?> <?= $isLocked ? 'disabled' : '' ?>>
+                    </td>
+                    <td class="text-center">
+                      <input class="form-check-input" type="checkbox" name="role_perms[<?= $r['id'] ?>][]" value="scan_document" 
+                        <?= (in_array('scan_document', $perms) || in_array('*', $perms)) ? 'checked' : '' ?> <?= $isLocked ? 'disabled' : '' ?>>
+                    </td>
+                    <td class="text-center">
+                      <input class="form-check-input" type="checkbox" name="role_perms[<?= $r['id'] ?>][]" value="delete_file" 
+                        <?= (in_array('delete_file', $perms) || in_array('*', $perms)) ? 'checked' : '' ?> <?= $isLocked ? 'disabled' : '' ?>>
+                    </td>
+                    <td class="text-center">
+                      <input class="form-check-input" type="checkbox" name="role_perms[<?= $r['id'] ?>][]" value="manage_users" 
+                        <?= (in_array('manage_users', $perms) || in_array('*', $perms)) ? 'checked' : '' ?> <?= $isLocked ? 'disabled' : '' ?>>
+                    </td>
+                  </tr>
+                <?php endforeach; ?>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div class="modal-footer bg-light">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary fw-bold shadow-sm">
+            <i class="fas fa-save me-1"></i> Save Roles & Permissions
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
 
 <?php require_once __DIR__ . '/../includes/footer.php'; ?>

@@ -169,10 +169,12 @@ $workTypes = $db->query("SELECT * FROM work_types ORDER BY name ASC")->fetchAll(
                     <i class="fas fa-paper-plane"></i> Forward
                   </a>
                   
-                  <?php if (in_array($_SESSION['user']['role_key'] ?? '', ['super_admin', 'admin'])): ?>
+                  <?php if (hasPermission('manage_users')): ?>
                     <a href="<?= APP_URL ?>/modules/file/edit.php?id=<?= $file['id'] ?>" class="btn btn-light border text-warning" title="Edit Case File">
                       <i class="fas fa-edit"></i>
                     </a>
+                  <?php endif; ?>
+                  <?php if (hasPermission('delete_file')): ?>
                     <a href="<?= APP_URL ?>/modules/file/delete.php?id=<?= $file['id'] ?>" class="btn btn-light border text-danger" title="Delete Case File" data-confirm="Are you sure you want to delete this case file permanently? All uploaded documents will be deleted." data-confirm-title="Delete Case File?" data-confirm-btn="Yes, Delete">
                       <i class="fas fa-trash-alt"></i>
                     </a>
