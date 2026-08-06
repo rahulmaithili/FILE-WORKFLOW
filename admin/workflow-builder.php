@@ -232,20 +232,7 @@ $roles = $db->query("SELECT * FROM roles ORDER BY id ASC")->fetchAll();
             <label class="form-label fw-semibold">Description</label>
             <textarea name="description" class="form-control" rows="2" placeholder="Purpose of this case pipeline"></textarea>
           </div>
-          <div class="mb-3">
-            <label class="form-label fw-semibold">Pipeline Graphic Icon</label>
-            <select name="icon" class="form-select" required>
-              <option value="fa-sitemap">Sitemap / Process Flow (Default)</option>
-              <option value="fa-network-wired">Network Grid / Fiber Connections</option>
-              <option value="fa-tv">Cable / TV Channels / Upgrade</option>
-              <option value="fa-id-card">Name / Registration Transfer</option>
-              <option value="fa-file-invoice-dollar">Billing / Payments / Complaints</option>
-              <option value="fa-wrench">Technical Maintenance / Service</option>
-              <option value="fa-shopping-cart">Order Processing / E-commerce</option>
-              <option value="fa-phone-alt">Customer Support / Telephony</option>
-              <option value="fa-user-shield">Verification & Security Check</option>
-            </select>
-          </div>
+          <input type="hidden" name="icon" value="fa-sitemap">
         </div>
         <div class="modal-footer bg-light">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
