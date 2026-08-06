@@ -28,6 +28,14 @@ if ($docTypeId > 0) {
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $docName = sanitize($_POST['document_name'] ?? '');
 
+    // Check if placeholder document record exists (where file_path is empty)
+    $placeholderId = null;
+    if ($docTypeId > 0) {
+        $stmtCheckPlaceholder = $db->prepare("SELECT id FROM file_documents WHERE file_id = :fid AND document_type_id = :dtid AND (file_path IS NULL OR file_path = '') LIMIT 1");
+        $stmtCheckPlaceholder->execute(['fid' => $fileId, 'dtid' => $docTypeId]);
+        $placeholderId = $stmtCheckPlaceholder->fetchColumn();
+    }
+
     // Check if Base64 camera scan was submitted
     if (!empty($_POST['scanned_image_base64'])) {
         $base64Data = $_POST['scanned_image_base64'];
@@ -39,14 +47,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $destination = DOC_UPLOAD_DIR . $newFileName;
 
         if (file_put_contents($destination, $decodedImage)) {
-            $stmtDoc = $db->prepare("INSERT INTO file_documents (file_id, document_name, file_path, uploaded_by, document_type_id) VALUES (:fid, :dname, :fpath, :uby, :doc_type_id)");
-            $stmtDoc->execute([
-                'fid' => $fileId,
-                'dname' => $docName ?: ($docType ? $docType['name'] : ('Camera Scan - ' . date('d M Y H:i'))),
-                'fpath' => 'uploads/documents/' . $newFileName,
-                'uby' => $user['id'],
-                'doc_type_id' => $docTypeId > 0 ? $docTypeId : null
-            ]);
+            if ($placeholderId) {
+                $stmtDoc = $db->prepare("UPDATE file_documents SET file_path = :fpath, uploaded_by = :uby, uploaded_at = CURRENT_TIMESTAMP WHERE id = :id");
+                $stmtDoc->execute([
+                    'fpath' => 'uploads/documents/' . $newFileName,
+                    'uby' => $user['id'],
+                    'id' => $placeholderId
+                ]);
+            } else {
+                $stmtDoc = $db->prepare("INSERT INTO file_documents (file_id, document_name, file_path, uploaded_by, document_type_id) VALUES (:fid, :dname, :fpath, :uby, :doc_type_id)");
+                $stmtDoc->execute([
+                    'fid' => $fileId,
+                    'dname' => $docName ?: ($docType ? $docType['name'] : ('Camera Scan - ' . date('d M Y H:i'))),
+                    'fpath' => 'uploads/documents/' . $newFileName,
+                    'uby' => $user['id'],
+                    'doc_type_id' => $docTypeId > 0 ? $docTypeId : null
+                ]);
+            }
             setFlashMessage('success', 'Scanned document uploaded successfully!');
             header("Location: view.php?id=" . $fileId);
             exit;
@@ -61,14 +78,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $destination = DOC_UPLOAD_DIR . $newFileName;
 
         if (move_uploaded_file($fileTmp, $destination)) {
-            $stmtDoc = $db->prepare("INSERT INTO file_documents (file_id, document_name, file_path, uploaded_by, document_type_id) VALUES (:fid, :dname, :fpath, :uby, :doc_type_id)");
-            $stmtDoc->execute([
-                'fid' => $fileId,
-                'dname' => $docName ?: ($docType ? $docType['name'] : $fileName),
-                'fpath' => 'uploads/documents/' . $newFileName,
-                'uby' => $user['id'],
-                'doc_type_id' => $docTypeId > 0 ? $docTypeId : null
-            ]);
+            if ($placeholderId) {
+                $stmtDoc = $db->prepare("UPDATE file_documents SET file_path = :fpath, uploaded_by = :uby, uploaded_at = CURRENT_TIMESTAMP WHERE id = :id");
+                $stmtDoc->execute([
+                    'fpath' => 'uploads/documents/' . $newFileName,
+                    'uby' => $user['id'],
+                    'id' => $placeholderId
+                ]);
+            } else {
+                $stmtDoc = $db->prepare("INSERT INTO file_documents (file_id, document_name, file_path, uploaded_by, document_type_id) VALUES (:fid, :dname, :fpath, :uby, :doc_type_id)");
+                $stmtDoc->execute([
+                    'fid' => $fileId,
+                    'dname' => $docName ?: ($docType ? $docType['name'] : $fileName),
+                    'fpath' => 'uploads/documents/' . $newFileName,
+                    'uby' => $user['id'],
+                    'doc_type_id' => $docTypeId > 0 ? $docTypeId : null
+                ]);
+            }
             setFlashMessage('success', 'Document attached successfully!');
             header("Location: view.php?id=" . $fileId);
             exit;

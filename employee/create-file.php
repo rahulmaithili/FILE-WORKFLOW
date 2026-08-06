@@ -77,7 +77,59 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         ]);
         $fileId = $db->lastInsertId();
 
-        // Handle File Document Upload if attached
+        // 1. Process structured document checklist
+        $collectedDocs = $_POST['collected_docs'] ?? []; // Array of doc_type_id => 1
+        $uploadedDocs = $_FILES['upload_docs'] ?? [];    // Array of file uploads
+
+        // Query all document type details for lookup
+        $stmtDocTypeCheck = $db->query("SELECT * FROM document_types")->fetchAll();
+        $docTypesMap = [];
+        foreach ($stmtDocTypeCheck as $dt) {
+            $docTypesMap[$dt['id']] = $dt;
+        }
+
+        foreach ($collectedDocs as $docTypeId => $val) {
+            $docTypeId = intval($docTypeId);
+            if (!isset($docTypesMap[$docTypeId])) continue;
+
+            $docTypeInfo = $docTypesMap[$docTypeId];
+            $hasFile = false;
+
+            // Check if a file was uploaded for this specific document type
+            if (isset($uploadedDocs['name'][$docTypeId]) && $uploadedDocs['error'][$docTypeId] === UPLOAD_ERR_OK) {
+                $fileTmp = $uploadedDocs['tmp_name'][$docTypeId];
+                $fileName = basename($uploadedDocs['name'][$docTypeId]);
+                $ext = pathinfo($fileName, PATHINFO_EXTENSION);
+                $newFileName = "DOC_" . $fileId . "_" . $docTypeId . "_" . time() . "." . $ext;
+                $destination = DOC_UPLOAD_DIR . $newFileName;
+
+                if (move_uploaded_file($fileTmp, $destination)) {
+                    // Save document with file path
+                    $stmtDoc = $db->prepare("INSERT INTO file_documents (file_id, document_name, file_path, uploaded_by, document_type_id) VALUES (:fid, :dname, :fpath, :uby, :doc_type_id)");
+                    $stmtDoc->execute([
+                        'fid' => $fileId,
+                        'dname' => $docTypeInfo['name'],
+                        'fpath' => 'uploads/documents/' . $newFileName,
+                        'uby' => $user['id'],
+                        'doc_type_id' => $docTypeId
+                    ]);
+                    $hasFile = true;
+                }
+            }
+
+            if (!$hasFile) {
+                // Save placeholder row indicating physical copy collected (but scan pending)
+                $stmtDoc = $db->prepare("INSERT INTO file_documents (file_id, document_name, file_path, uploaded_by, document_type_id) VALUES (:fid, :dname, '', :uby, :doc_type_id)");
+                $stmtDoc->execute([
+                    'fid' => $fileId,
+                    'dname' => $docTypeInfo['name'],
+                    'uby' => $user['id'],
+                    'doc_type_id' => $docTypeId
+                ]);
+            }
+        }
+
+        // 2. Handle optional general File Document Upload if attached
         if (isset($_FILES['initial_document']) && $_FILES['initial_document']['error'] === UPLOAD_ERR_OK) {
             $fileTmp = $_FILES['initial_document']['tmp_name'];
             $fileName = basename($_FILES['initial_document']['name']);
@@ -199,10 +251,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           </div>
         </div>
 
-        <h5 class="fw-bold text-primary border-bottom pb-2 mb-3 mt-4">Document Attachment</h5>
+        <!-- Dynamic Required Documents Checklist Card -->
+        <div id="required_docs_card" class="card border-0 shadow-sm p-4 mb-4 d-none" style="border-radius: var(--radius-lg); background-color: #fafafa;">
+          <h5 class="fw-bold text-primary border-bottom pb-2 mb-3">
+            <i class="fas fa-tasks text-primary me-2"></i> Required Documents Intake
+          </h5>
+          <p class="text-muted small mb-3">Check the documents you have physically collected from the customer, or upload scanned copies right now:</p>
+          <div id="required_docs_list" class="d-flex flex-column gap-3">
+            <!-- Dynamically populated via Javascript -->
+          </div>
+        </div>
+
+        <h5 class="fw-bold text-primary border-bottom pb-2 mb-3 mt-4">Other Attachment</h5>
 
         <div class="mb-4">
-          <label class="form-label fw-semibold">Initial Intake Document (ID Proof, Photo, Application Form)</label>
+          <label class="form-label fw-semibold">Additional Intake Document (Optional File)</label>
           <input type="file" name="initial_document" class="form-control" accept="image/*,.pdf,.doc,.docx">
           <small class="text-muted">You can also scan additional documents directly inside the file after creation.</small>
         </div>
@@ -230,6 +293,59 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 </div>
 
 <script>
+document.querySelector('select[name="work_type_id"]').addEventListener('change', function() {
+    const workTypeId = this.value;
+    const container = document.getElementById('required_docs_card');
+    const list = document.getElementById('required_docs_list');
+    
+    if (!workTypeId) {
+        container.classList.add('d-none');
+        list.innerHTML = '';
+        return;
+    }
+    
+    fetch('<?= APP_URL ?>/api/workflow-api.php?action=get_required_docs&work_type_id=' + workTypeId)
+        .then(res => res.json())
+        .then(response => {
+            if (response.success && response.data.length > 0) {
+                container.classList.remove('d-none');
+                list.innerHTML = '';
+                
+                response.data.forEach(doc => {
+                    const mandatoryStar = doc.is_mandatory == 1 ? '<span class="text-danger">*</span>' : '';
+                    const itemHtml = `
+                        <div class="row align-items-center g-2 border-bottom pb-3 mb-2">
+                            <div class="col-md-5">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="collected_docs[${doc.id}]" value="1" id="collect_${doc.id}" ${doc.is_mandatory == 1 ? 'required' : ''}>
+                                    <label class="form-check-label fw-semibold text-dark small" for="collect_${doc.id}">
+                                        I have collected ${doc.name} ${mandatoryStar}
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-7">
+                                <input type="file" name="upload_docs[${doc.id}]" class="form-control form-control-sm" accept="image/*,.pdf,.doc,.docx" onchange="autoCheckCollected(${doc.id})">
+                                <small class="text-muted" style="font-size: 0.72rem;">Optional: Upload scanned file now</small>
+                            </div>
+                        </div>
+                    `;
+                    list.innerHTML += itemHtml;
+                });
+            } else {
+                container.classList.add('d-none');
+                list.innerHTML = '';
+            }
+        })
+        .catch(err => {
+            console.error("Error loading checklist: ", err);
+            container.classList.add('d-none');
+        });
+});
+
+function autoCheckCollected(docId) {
+    document.getElementById('collect_' + docId).checked = true;
+}
+
 function triggerOcrScan() {
   const overlay = document.getElementById('ocrScannerOverlay');
   const statusText = document.getElementById('ocrScanStatus');

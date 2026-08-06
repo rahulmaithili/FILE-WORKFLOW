@@ -221,14 +221,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_comment'])) {
       <?php else: ?>
         <div class="list-group list-group-flush">
           <?php foreach ($requiredDocTypes as $docType): 
-            $isUploaded = isset($uploadedChecklist[$docType['id']]);
-            $doc = $isUploaded ? $uploadedChecklist[$docType['id']] : null;
+            $hasDocRecord = isset($uploadedChecklist[$docType['id']]);
+            $doc = $hasDocRecord ? $uploadedChecklist[$docType['id']] : null;
+            $isScanned = $hasDocRecord && !empty($doc['file_path']);
+            $isPhysicalOnly = $hasDocRecord && empty($doc['file_path']);
           ?>
             <div class="list-group-item d-flex flex-column flex-md-row justify-content-between align-items-md-center px-0 py-3">
               <div class="d-flex align-items-center gap-3">
-                <div class="avatar-circle <?= $isUploaded ? 'bg-success-soft text-success' : 'bg-danger-soft text-danger' ?>" style="width: 36px; height: 36px; border: none;">
-                  <i class="fas <?= $isUploaded ? 'fa-check' : 'fa-times' ?>"></i>
-                </div>
+                <?php if ($isScanned): ?>
+                  <div class="avatar-circle bg-success-soft text-success" style="width: 36px; height: 36px; border: none;">
+                    <i class="fas fa-check"></i>
+                  </div>
+                <?php elseif ($isPhysicalOnly): ?>
+                  <div class="avatar-circle bg-warning-soft text-warning" style="width: 36px; height: 36px; border: none;">
+                    <i class="fas fa-hand-holding"></i>
+                  </div>
+                <?php else: ?>
+                  <div class="avatar-circle bg-danger-soft text-danger" style="width: 36px; height: 36px; border: none;">
+                    <i class="fas fa-times"></i>
+                  </div>
+                <?php endif; ?>
+
                 <div>
                   <div class="d-flex align-items-center gap-2">
                     <strong class="text-dark small"><?= htmlspecialchars($docType['name']) ?></strong>
@@ -236,9 +249,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_comment'])) {
                       <span class="text-danger small font-monospace" style="font-size: 0.72rem;">*Required</span>
                     <?php endif; ?>
                   </div>
-                  <?php if ($isUploaded): ?>
-                    <small class="text-muted d-block" style="font-size: 0.75rem;">
-                      Uploaded by <?= htmlspecialchars($doc['uploader_name'] ?? 'System') ?> &bull; <?= timeAgo($doc['uploaded_at']) ?>
+                  <?php if ($isScanned): ?>
+                    <small class="text-success d-block" style="font-size: 0.75rem;">
+                      <i class="fas fa-check-circle me-1"></i> Received & Scanned (by <?= htmlspecialchars($doc['uploader_name'] ?? 'System') ?>) &bull; <?= timeAgo($doc['uploaded_at']) ?>
+                    </small>
+                  <?php elseif ($isPhysicalOnly): ?>
+                    <small class="text-warning d-block" style="font-size: 0.75rem;">
+                      <i class="fas fa-file-invoice me-1"></i> Physical Copy Received (Scan Pending) &bull; <?= timeAgo($doc['uploaded_at']) ?>
                     </small>
                   <?php else: ?>
                     <small class="text-danger-soft text-danger d-block" style="font-size: 0.75rem;">
@@ -249,10 +266,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_comment'])) {
               </div>
 
               <div class="d-flex align-items-center gap-2 mt-2 mt-md-0">
-                <?php if ($isUploaded): ?>
+                <?php if ($isScanned): ?>
                   <button type="button" onclick="previewDocument('<?= APP_URL ?>/serve.php?file=<?= htmlspecialchars($doc['file_path']) ?>', '<?= htmlspecialchars($doc['document_name']) ?>')" class="btn btn-sm btn-light border text-primary" title="Preview File">
-                    <i class="fas fa-eye me-1"></i> View
+                    <i class="fas fa-eye me-1"></i> View Scan
                   </button>
+                <?php elseif ($isPhysicalOnly): ?>
+                  <a href="<?= APP_URL ?>/modules/file/document-upload.php?file_id=<?= $file['id'] ?>&document_type_id=<?= $docType['id'] ?>" class="btn btn-sm btn-outline-warning fw-bold">
+                    <i class="fas fa-camera-retro me-1"></i> Upload Scan Now
+                  </a>
                 <?php else: ?>
                   <a href="<?= APP_URL ?>/modules/file/document-upload.php?file_id=<?= $file['id'] ?>&document_type_id=<?= $docType['id'] ?>" class="btn btn-sm btn-outline-danger fw-bold">
                     <i class="fas fa-camera-retro me-1"></i> Scan / Upload

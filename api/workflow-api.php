@@ -4,13 +4,18 @@ require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/functions.php';
 
-if (!isLoggedIn() || !hasPermission('manage_users')) {
+if (!isLoggedIn()) {
     echo json_encode(['success' => false, 'message' => 'Unauthorized']);
     exit;
 }
 
 $db = getDB();
 $action = $_GET['action'] ?? $_POST['action'] ?? '';
+
+if ($action !== 'get_required_docs' && !hasPermission('manage_users')) {
+    echo json_encode(['success' => false, 'message' => 'Access Denied']);
+    exit;
+}
 
 switch ($action) {
     case 'add_work_type':
@@ -99,6 +104,26 @@ switch ($action) {
         } else {
             echo json_encode(['success' => false, 'message' => 'Invalid Pipeline ID']);
         }
+        break;
+
+    case 'get_required_docs':
+        $workTypeId = intval($_GET['work_type_id'] ?? $_POST['work_type_id'] ?? 0);
+        if ($workTypeId <= 0) {
+            echo json_encode(['success' => false, 'message' => 'Invalid work type ID']);
+            exit;
+        }
+        
+        $stmt = $db->prepare("
+            SELECT dt.id, dt.name, dt.is_mandatory 
+            FROM document_types dt
+            JOIN work_type_required_docs wtrd ON dt.id = wtrd.document_type_id
+            WHERE wtrd.work_type_id = :wt_id
+            ORDER BY dt.name ASC
+        ");
+        $stmt->execute(['wt_id' => $workTypeId]);
+        $docs = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        echo json_encode(['success' => true, 'data' => $docs]);
         break;
 
     default:
